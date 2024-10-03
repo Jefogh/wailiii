@@ -19,7 +19,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: '3.x'  # ضبط إصدار Python
+          python-version: '3.10'  # ضبط إصدار Python
 
       - name: Install dependencies
         run: |
@@ -32,7 +32,7 @@ jobs:
           pyinstaller --onefile --windowed main.py  # بناء ملف تنفيذي للتطبيق باستخدام PyInstaller
 
       - name: Upload Executable
-        uses: actions/upload-artifact@v2  # رفع الملف التنفيذي كـ "Artifact" بعد البناء
+        uses: actions/upload-artifact@v3  # تم تحديث الإصدار إلى v3
         with:
           name: Executable
           path: dist/  # رفع كل الملفات التنفيذية في مجلد dist
