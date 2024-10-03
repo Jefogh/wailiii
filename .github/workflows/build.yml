@@ -1,0 +1,38 @@
+name: Build Desktop Application
+
+on:
+  push:
+    branches:
+      - main  # سيتم تشغيل العمل عندما يكون هناك دفع إلى الفرع الرئيسي
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]  # سيتم البناء على أنظمة تشغيل متعددة
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2  # تنزيل كود المشروع
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'  # ضبط إصدار Python
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt  # تثبيت المتطلبات من requirements.txt
+
+      - name: Build executable with PyInstaller
+        run: |
+          pip install pyinstaller
+          pyinstaller --onefile --windowed main.py  # بناء ملف تنفيذي للتطبيق باستخدام PyInstaller
+
+      - name: Upload Executable
+        uses: actions/upload-artifact@v2  # رفع الملف التنفيذي كـ "Artifact" بعد البناء
+        with:
+          name: Executable
+          path: dist/  # رفع كل الملفات التنفيذية في مجلد dist
