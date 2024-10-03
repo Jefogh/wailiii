@@ -1,25 +1,22 @@
-name: Build Desktop Application
+name: Build Windows Desktop Application
 
 on:
   push:
     branches:
-      - main  # سيتم تشغيل العمل عندما يكون هناك دفع إلى الفرع الرئيسي
+      - main  # سيتم تشغيل العمل عند الدفع إلى الفرع الرئيسي
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]  # سيتم البناء على أنظمة تشغيل متعددة
+    runs-on: windows-latest  # بناء فقط على نظام Windows
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3  # تحديث إلى v3 لاستخدام Node.js 20
+        uses: actions/checkout@v3  # استخدام أحدث إصدار
 
       - name: Set up Python
-        uses: actions/setup-python@v4  # تحديث إلى v4 لاستخدام Node.js 20
+        uses: actions/setup-python@v4  # استخدام أحدث إصدار
         with:
-          python-version: '3.10'  # ضبط إصدار Python
+          python-version: '3.10'  # تثبيت إصدار Python
 
       - name: Install dependencies
         run: |
@@ -29,10 +26,13 @@ jobs:
       - name: Build executable with PyInstaller
         run: |
           pip install pyinstaller
-          pyinstaller --onefile --windowed main.py  # بناء ملف تنفيذي للتطبيق باستخدام PyInstaller
+          pyinstaller --onefile --windowed main.py  # بناء الملف التنفيذي .exe
+
+      - name: List dist directory contents  # خطوة لفحص الملفات في مجلد dist
+        run: dir dist
 
       - name: Upload Executable
-        uses: actions/upload-artifact@v3  # بالفعل v3 متوافق مع Node.js 20
+        uses: actions/upload-artifact@v3  # رفع الملف التنفيذي كـ Artifact
         with:
           name: Executable
-          path: dist/  # رفع كل الملفات التنفيذية في مجلد dist
+          path: dist/*.exe  # رفع الملف التنفيذي بصيغة .exe من مجلد dist
