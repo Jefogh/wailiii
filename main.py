@@ -317,7 +317,7 @@ class CaptchaApp:
             get_url = f"https://api.ecsc.gov.sy:8080/rs/reserve?id={captcha_id}&captcha={captcha_solution}"
             response = session.get(get_url)
             self.update_notification(f"Server Response: {response.text}",
-                                     "green" if response.status_code == 200 else "red")
+                                     "orange" if response.status_code == 200 else "red")
         except Exception as e:
             self.update_notification(f"Failed to submit captcha: {e}", "red")
 
