@@ -1,9 +1,9 @@
-name: Build Windows Desktop Application
+name: Build Windows Desktop Application 1
 
 on:
   push:
     branches:
-      - main  # سيتم تشغيل العمل عند الدفع إلى الفرع الرئيسي
+      - zapoom  # سيتم تشغيل العمل عند الدفع إلى الفرع الرئيسي
 
 jobs:
   build:
