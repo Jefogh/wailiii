@@ -1,4 +1,4 @@
-name: Build Windows Desktop Application 12
+name: Build Windows Desktop Application 1266
 
 on:
   push:
