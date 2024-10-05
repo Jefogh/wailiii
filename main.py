@@ -15,6 +15,7 @@ from torchvision import models
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 
+
 cpu_device = torch.device("cpu")
 
 
@@ -114,7 +115,6 @@ class CaptchaApp:
         self.upload_background_button = None
         self.notification_label = None
         self.time_label = None
-        self.prediction_label = None
         self.executor = ThreadPoolExecutor(max_workers=4)
 
         self.alarm_time = None
@@ -140,15 +140,10 @@ class CaptchaApp:
         self.main_frame.pack(fill=tk.BOTH, expand=True)
         self.canvas.create_window((0, 0), window=self.main_frame, anchor=tk.NW)
         self.main_frame.bind("<Configure>", lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
-
         self.notification_label = tk.Label(self.root, text="", fg="white", bg="blue", font=("Helvetica", 12))
         self.notification_label.pack(fill=tk.X)
-
         self.time_label = tk.Label(self.root, text="", fg="white", bg="black", font=("Helvetica", 12))
         self.time_label.pack(side=tk.BOTTOM, fill=tk.X)
-
-        self.prediction_label = tk.Label(self.root, text="", fg="white", bg="green", font=("Helvetica", 14))
-        self.prediction_label.pack(side=tk.BOTTOM, fill=tk.X)
 
         self.alarm_button = tk.Button(self.main_frame, text="Set Alarm", command=self.set_alarm)
         self.alarm_button.pack(pady=10)
@@ -158,7 +153,6 @@ class CaptchaApp:
     def create_widgets(self):
         self.add_account_button = tk.Button(self.main_frame, text="Add Account", command=self.add_account)
         self.add_account_button.pack()
-
         self.upload_background_button = tk.Button(self.main_frame, text="Upload Backgrounds",
                                                   command=self.upload_backgrounds)
         self.upload_background_button.pack()
@@ -223,18 +217,9 @@ class CaptchaApp:
     def get_captcha(self, session, captcha_id, username):
         try:
             captcha_url = f"https://api.ecsc.gov.sy:8080/files/fs/captcha/{captcha_id}"
-
-            # إرسال طلب OPTIONS أولاً
-            options_response = session.options(captcha_url)
-            if options_response.status_code != 200:
-                self.update_notification(f"Failed OPTIONS request. Status code: {options_response.status_code}", "red")
-                return None
-
-            # بعد نجاح طلب OPTIONS، إرسال طلب GET
             while True:
                 response = session.get(captcha_url)
-                self.update_notification(f"Server Response: {response.text}",
-                                         "green" if response.status_code == 200 else "red")
+                self.update_notification(f"Server Response: {response.text}", "green" if response.status_code == 200 else "red")
 
                 if response.status_code == 200:
                     response_data = response.json()
@@ -249,41 +234,32 @@ class CaptchaApp:
                 else:
                     break
         except Exception as e:
-            self.update_notification(f"Failed to get captcha: {e}", "red")
+            self.update_notification(f"Failed to get captcha: {e}", "red", response.text)
         return None
 
     def show_captcha(self, captcha_data, username, captcha_id):
         try:
             if self.captcha_frame:
                 self.captcha_frame.destroy()
-
             captcha_base64 = captcha_data.split(",")[1] if "," in captcha_data else captcha_data
             captcha_image_data = np.frombuffer(base64.b64decode(captcha_base64), dtype=np.uint8)
             captcha_image = cv2.imdecode(captcha_image_data, cv2.IMREAD_COLOR)
-
             if captcha_image is None:
                 print("Failed to decode captcha image from memory.")
                 return
-
             start_time = time.time()
             processed_image = self.process_captcha(captcha_image)
             processed_image = cv2.resize(processed_image, (200, 114))
             elapsed_time_bg_removal = time.time() - start_time
-
             self.display_captcha_image(processed_image)
-
             start_time = time.time()
             predictions = self.trained_model.predict(processed_image)
             elapsed_time_prediction = time.time() - start_time
-
             ocr_output_text = f"{predictions[0]} {predictions[1]} {predictions[2]}"
             print(f"Predicted Operation: {ocr_output_text}")
-
             self.update_notification(f"Captcha solved in {elapsed_time_prediction:.2f}s", "green")
-            self.update_time_label(f"Background removal: {elapsed_time_bg_removal:.2f}s, Prediction: {elapsed_time_prediction:.2f}s")
-
-            self.prediction_label.config(text=f"Prediction: {ocr_output_text}")
-
+            self.update_time_label(
+                f"Background removal: {elapsed_time_bg_removal:.2f}s, Prediction: {elapsed_time_prediction:.2f}s")
             captcha_solution = self.solve_captcha_from_prediction(predictions)
             if captcha_solution is not None:
                 self.executor.submit(self.submit_captcha, username, captcha_id, captcha_solution)
@@ -348,16 +324,16 @@ class CaptchaApp:
     @staticmethod
     def generate_user_agent():
         user_agent_list = [
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, مثل Gecko) "
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
             "Chrome/91.0.4472.124 Safari/537.36",
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:130.0) Gecko/20100101 Firefox/130.0",
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/605.1.15 (KHTML, مثل Gecko) "
             "Version/13.1.1 Safari/605.1.15",
-            "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, مثل Gecko) "
+            "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) "
             "Chrome/56.0.2924.87 Safari/537.36",
-            "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, مثل Gecko) "
+            "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) "
             "Chrome/47.0.2526.106 Safari/537.36",
-            "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, مثل Gecko) Chrome/41.0.2228.0 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36",
         ]
         return random.choice(user_agent_list)
 
