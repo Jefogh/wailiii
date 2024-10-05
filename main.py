@@ -15,7 +15,6 @@ from torchvision import models
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 
-
 cpu_device = torch.device("cpu")
 
 
@@ -217,6 +216,13 @@ class CaptchaApp:
     def get_captcha(self, session, captcha_id, username):
         try:
             captcha_url = f"https://api.ecsc.gov.sy:8080/files/fs/captcha/{captcha_id}"
+
+            # Send OPTION request to check the connection before GET
+            option_response = session.options(captcha_url)
+            if option_response.status_code != 200:
+                self.update_notification(f"Option request failed with status {option_response.status_code}", "red")
+                return None
+
             while True:
                 response = session.get(captcha_url)
                 self.update_notification(f"Server Response: {response.text}", "green" if response.status_code == 200 else "red")
@@ -247,19 +253,33 @@ class CaptchaApp:
             if captcha_image is None:
                 print("Failed to decode captcha image from memory.")
                 return
+
             start_time = time.time()
             processed_image = self.process_captcha(captcha_image)
             processed_image = cv2.resize(processed_image, (200, 114))
             elapsed_time_bg_removal = time.time() - start_time
+
             self.display_captcha_image(processed_image)
+
             start_time = time.time()
             predictions = self.trained_model.predict(processed_image)
             elapsed_time_prediction = time.time() - start_time
+
             ocr_output_text = f"{predictions[0]} {predictions[1]} {predictions[2]}"
             print(f"Predicted Operation: {ocr_output_text}")
-            self.update_notification(f"Captcha solved in {elapsed_time_prediction:.2f}s", "green")
+
+            self.update_notification(
+                f"Captcha solved in {elapsed_time_prediction:.2f}s\n"
+                f"Predicted: {ocr_output_text}\n"
+                f"Background removal: {elapsed_time_bg_removal:.2f}s, Prediction: {elapsed_time_prediction:.2f}s",
+                "green"
+            )
             self.update_time_label(
-                f"Background removal: {elapsed_time_bg_removal:.2f}s, Prediction: {elapsed_time_prediction:.2f}s")
+                f"Background removal: {elapsed_time_bg_removal:.2f}s, "
+                f"Prediction: {elapsed_time_prediction:.2f}s, "
+                f"Recognized text: {ocr_output_text}"
+            )
+
             captcha_solution = self.solve_captcha_from_prediction(predictions)
             if captcha_solution is not None:
                 self.executor.submit(self.submit_captcha, username, captcha_id, captcha_solution)
@@ -315,6 +335,13 @@ class CaptchaApp:
             return
         try:
             get_url = f"https://api.ecsc.gov.sy:8080/rs/reserve?id={captcha_id}&captcha={captcha_solution}"
+
+            # Send OPTION request before GET
+            option_response = session.options(get_url)
+            if option_response.status_code != 200:
+                self.update_notification(f"Option request failed with status {option_response.status_code}", "red")
+                return
+
             response = session.get(get_url)
             self.update_notification(f"Server Response: {response.text}",
                                      "orange" if response.status_code == 200 else "red")
@@ -451,30 +478,6 @@ class CaptchaApp:
         if background_paths:
             self.background_images = [cv2.imread(path) for path in background_paths]
             self.update_notification(f"{len(self.background_images)} background images uploaded successfully!", "green")
-
-    def solve_captcha_from_prediction(self, prediction):
-        num1, operation, num2 = prediction
-        if operation == "+":
-            return num1 + num2
-        elif operation == "-":
-            return num1 - num2
-        elif operation == "×":
-            return num1 * num2
-        return None
-
-    def update_notification(self, message, color, response_text=None):
-        full_message = message
-        if response_text:
-            full_message += f"\nServer Response: {response_text}"
-        self.notification_label.config(text=full_message, bg=color)
-
-        self.root.after(8000, self.clear_notification)
-
-    def clear_notification(self):
-        self.notification_label.config(text="", bg="blue")
-
-    def update_time_label(self, message):
-        self.time_label.config(text=message)
 
 
 if __name__ == "__main__":
